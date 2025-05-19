@@ -1,0 +1,569 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Online Python Editor</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.45.0/min/vs/loader.min.js"></script>
+    <style>
+        :root {
+            --bg-primary: #1e1e1e;
+            --bg-secondary: #252526;
+            --text-primary: #d4d4d4;
+            --text-secondary: #9cdcfe;
+            --accent: #007acc;
+            --border: #3c3c3c;
+            --success: #4CAF50;
+            --error: #f44336;
+            --header-height: 50px;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: var(--bg-primary);
+            color: var(--text-primary);
+            line-height: 1.6;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .header {
+            height: var(--header-height);
+            background-color: var(--bg-secondary);
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            align-items: center;
+            padding: 0 20px;
+            justify-content: space-between;
+        }
+
+        .header-left {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+        }
+
+        .header-right {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .logo {
+            color: var(--text-secondary);
+            font-size: 20px;
+            font-weight: 500;
+        }
+
+        .main-container {
+            flex: 1;
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            padding: 20px;
+            height: calc(100vh - var(--header-height));
+        }
+
+        .editor-container {
+            background-color: var(--bg-secondary);
+            border-radius: 6px;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .editor-header {
+            padding: 10px;
+            background-color: var(--bg-primary);
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .editor-title {
+            color: var(--text-secondary);
+            font-size: 14px;
+        }
+
+        #monaco-editor {
+            flex: 1;
+            min-height: 0;
+        }
+
+        .output-container {
+            background-color: var(--bg-secondary);
+            border-radius: 6px;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .output-header {
+            padding: 10px;
+            background-color: var(--bg-primary);
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .output-title {
+            color: var(--text-secondary);
+            font-size: 14px;
+        }
+
+        #output {
+            flex: 1;
+            background-color: var(--bg-secondary);
+            padding: 15px;
+            white-space: pre-wrap;
+            font-family: 'Consolas', monospace;
+            font-size: 14px;
+            color: var(--text-primary);
+            overflow-y: auto;
+        }
+
+        .btn {
+            background-color: var(--accent);
+            color: white;
+            padding: 8px 16px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            transition: background-color 0.2s;
+        }
+
+        .btn:hover {
+            background-color: #0062a3;
+        }
+
+        .btn:active {
+            transform: translateY(1px);
+        }
+
+        .btn-secondary {
+            background-color: var(--bg-primary);
+            color: var(--text-primary);
+            border: 1px solid var(--border);
+        }
+
+        .btn-secondary:hover {
+            background-color: var(--border);
+        }
+
+        .input-container {
+            display: none;
+            padding: 15px;
+            background-color: var(--bg-primary);
+            border-top: 1px solid var(--border);
+        }
+
+        .input-container.active {
+            display: block;
+        }
+
+        .input-header {
+            color: var(--text-secondary);
+            font-size: 14px;
+            margin-bottom: 10px;
+        }
+
+        #user-input {
+            width: 100%;
+            background-color: var(--bg-secondary);
+            color: var(--text-primary);
+            border: 1px solid var(--border);
+            border-radius: 4px;
+            padding: 8px;
+            font-family: 'Consolas', monospace;
+            font-size: 14px;
+            margin-bottom: 10px;
+        }
+
+        #user-input:focus {
+            outline: none;
+            border-color: var(--accent);
+        }
+
+        .input-buttons {
+            display: flex;
+            gap: 10px;
+        }
+
+        .status {
+            font-size: 12px;
+            padding: 4px 8px;
+            border-radius: 4px;
+            background-color: var(--bg-primary);
+        }
+
+        .status.success {
+            color: var(--success);
+        }
+
+        .status.error {
+            color: var(--error);
+        }
+
+        .status.running {
+            color: var(--accent);
+        }
+
+        /* Custom scrollbar */
+        ::-webkit-scrollbar {
+            width: 10px;
+            height: 10px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: var(--bg-primary);
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: var(--border);
+            border-radius: 5px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: #555;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <div class="header-left">
+            <div class="logo">Online Python Editor</div>
+        </div>
+        <div class="header-right">
+            <button id="run" class="btn">
+                <span>▶</span> Run
+            </button>
+        </div>
+    </div>
+
+    <div class="main-container">
+        <div class="editor-container">
+            <div class="editor-header">
+                <div class="editor-title">main.py</div>
+            </div>
+            <div id="monaco-editor"></div>
+        </div>
+
+        <div class="output-container">
+            <div class="output-header">
+                <div class="output-title">Output</div>
+                <div id="status" class="status">Ready</div>
+            </div>
+            <div id="output"></div>
+            <div id="input-container" class="input-container">
+                <div class="input-header">Enter Input:</div>
+                <input type="text" id="user-input" placeholder="Type your input here...">
+                <div class="input-buttons">
+                    <button id="submit-input" class="btn">Submit</button>
+                    <button id="cancel-input" class="btn btn-secondary">Cancel</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Initialize Monaco Editor
+        require.config({ paths: { 'vs': 'https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.45.0/min/vs' }});
+        require(['vs/editor/editor.main'], function() {
+            // Configure Monaco Editor with Python language features
+            monaco.languages.registerCompletionItemProvider('python', {
+                provideCompletionItems: function(model, position) {
+                    const suggestions = [
+                        // Python keywords
+                        { label: 'def', kind: monaco.languages.CompletionItemKind.Keyword, insertText: 'def ${1:function_name}(${2:parameters}):\n\t${0}' },
+                        { label: 'class', kind: monaco.languages.CompletionItemKind.Keyword, insertText: 'class ${1:ClassName}:\n\t${0}' },
+                        { label: 'if', kind: monaco.languages.CompletionItemKind.Keyword, insertText: 'if ${1:condition}:\n\t${0}' },
+                        { label: 'else', kind: monaco.languages.CompletionItemKind.Keyword, insertText: 'else:\n\t${0}' },
+                        { label: 'elif', kind: monaco.languages.CompletionItemKind.Keyword, insertText: 'elif ${1:condition}:\n\t${0}' },
+                        { label: 'for', kind: monaco.languages.CompletionItemKind.Keyword, insertText: 'for ${1:item} in ${2:items}:\n\t${0}' },
+                        { label: 'while', kind: monaco.languages.CompletionItemKind.Keyword, insertText: 'while ${1:condition}:\n\t${0}' },
+                        { label: 'try', kind: monaco.languages.CompletionItemKind.Keyword, insertText: 'try:\n\t${1}\nexcept ${2:Exception} as ${3:e}:\n\t${0}' },
+                        { label: 'except', kind: monaco.languages.CompletionItemKind.Keyword, insertText: 'except ${1:Exception} as ${2:e}:\n\t${0}' },
+                        { label: 'finally', kind: monaco.languages.CompletionItemKind.Keyword, insertText: 'finally:\n\t${0}' },
+                        { label: 'with', kind: monaco.languages.CompletionItemKind.Keyword, insertText: 'with ${1:expression} as ${2:target}:\n\t${0}' },
+                        { label: 'import', kind: monaco.languages.CompletionItemKind.Keyword, insertText: 'import ${1:module}' },
+                        { label: 'from', kind: monaco.languages.CompletionItemKind.Keyword, insertText: 'from ${1:module} import ${2:name}' },
+                        { label: 'as', kind: monaco.languages.CompletionItemKind.Keyword, insertText: 'as ${1:alias}' },
+                        { label: 'return', kind: monaco.languages.CompletionItemKind.Keyword, insertText: 'return ${1:value}' },
+                        { label: 'break', kind: monaco.languages.CompletionItemKind.Keyword, insertText: 'break' },
+                        { label: 'continue', kind: monaco.languages.CompletionItemKind.Keyword, insertText: 'continue' },
+                        { label: 'pass', kind: monaco.languages.CompletionItemKind.Keyword, insertText: 'pass' },
+                        { label: 'raise', kind: monaco.languages.CompletionItemKind.Keyword, insertText: 'raise ${1:Exception}' },
+                        { label: 'yield', kind: monaco.languages.CompletionItemKind.Keyword, insertText: 'yield ${1:value}' },
+                        { label: 'async', kind: monaco.languages.CompletionItemKind.Keyword, insertText: 'async ' },
+                        { label: 'await', kind: monaco.languages.CompletionItemKind.Keyword, insertText: 'await ${1:expression}' },
+                        { label: 'global', kind: monaco.languages.CompletionItemKind.Keyword, insertText: 'global ${1:name}' },
+                        { label: 'nonlocal', kind: monaco.languages.CompletionItemKind.Keyword, insertText: 'nonlocal ${1:name}' },
+                        { label: 'lambda', kind: monaco.languages.CompletionItemKind.Keyword, insertText: 'lambda ${1:parameters}: ${2:expression}' },
+                        { label: 'del', kind: monaco.languages.CompletionItemKind.Keyword, insertText: 'del ${1:target}' },
+                        { label: 'assert', kind: monaco.languages.CompletionItemKind.Keyword, insertText: 'assert ${1:condition}' },
+                        { label: 'None', kind: monaco.languages.CompletionItemKind.Keyword, insertText: 'None' },
+                        { label: 'True', kind: monaco.languages.CompletionItemKind.Keyword, insertText: 'True' },
+                        { label: 'False', kind: monaco.languages.CompletionItemKind.Keyword, insertText: 'False' },
+                        
+                        // Common Python built-in functions
+                        { label: 'print', kind: monaco.languages.CompletionItemKind.Function, insertText: 'print(${1:value})' },
+                        { label: 'len', kind: monaco.languages.CompletionItemKind.Function, insertText: 'len(${1:object})' },
+                        { label: 'range', kind: monaco.languages.CompletionItemKind.Function, insertText: 'range(${1:start}, ${2:stop}, ${3:step})' },
+                        { label: 'str', kind: monaco.languages.CompletionItemKind.Function, insertText: 'str(${1:object})' },
+                        { label: 'int', kind: monaco.languages.CompletionItemKind.Function, insertText: 'int(${1:object})' },
+                        { label: 'float', kind: monaco.languages.CompletionItemKind.Function, insertText: 'float(${1:object})' },
+                        { label: 'list', kind: monaco.languages.CompletionItemKind.Function, insertText: 'list(${1:iterable})' },
+                        { label: 'dict', kind: monaco.languages.CompletionItemKind.Function, insertText: 'dict(${1:iterable})' },
+                        { label: 'set', kind: monaco.languages.CompletionItemKind.Function, insertText: 'set(${1:iterable})' },
+                        { label: 'tuple', kind: monaco.languages.CompletionItemKind.Function, insertText: 'tuple(${1:iterable})' },
+                        { label: 'sorted', kind: monaco.languages.CompletionItemKind.Function, insertText: 'sorted(${1:iterable})' },
+                        { label: 'sum', kind: monaco.languages.CompletionItemKind.Function, insertText: 'sum(${1:iterable})' },
+                        { label: 'min', kind: monaco.languages.CompletionItemKind.Function, insertText: 'min(${1:iterable})' },
+                        { label: 'max', kind: monaco.languages.CompletionItemKind.Function, insertText: 'max(${1:iterable})' },
+                        { label: 'enumerate', kind: monaco.languages.CompletionItemKind.Function, insertText: 'enumerate(${1:iterable})' },
+                        { label: 'zip', kind: monaco.languages.CompletionItemKind.Function, insertText: 'zip(${1:iterable1}, ${2:iterable2})' },
+                        { label: 'map', kind: monaco.languages.CompletionItemKind.Function, insertText: 'map(${1:function}, ${2:iterable})' },
+                        { label: 'filter', kind: monaco.languages.CompletionItemKind.Function, insertText: 'filter(${1:function}, ${2:iterable})' },
+                        { label: 'open', kind: monaco.languages.CompletionItemKind.Function, insertText: 'open(${1:file}, ${2:mode})' },
+                        { label: 'isinstance', kind: monaco.languages.CompletionItemKind.Function, insertText: 'isinstance(${1:object}, ${2:classinfo})' },
+                        { label: 'issubclass', kind: monaco.languages.CompletionItemKind.Function, insertText: 'issubclass(${1:class}, ${2:classinfo})' },
+                        { label: 'super', kind: monaco.languages.CompletionItemKind.Function, insertText: 'super(${1:class}, ${2:self})' },
+                        { label: 'property', kind: monaco.languages.CompletionItemKind.Function, insertText: 'property(${1:fget}, ${2:fset}, ${3:fdel})' },
+                        { label: 'staticmethod', kind: monaco.languages.CompletionItemKind.Function, insertText: 'staticmethod(${1:function})' },
+                        { label: 'classmethod', kind: monaco.languages.CompletionItemKind.Function, insertText: 'classmethod(${1:function})' },
+                        { label: 'abs', kind: monaco.languages.CompletionItemKind.Function, insertText: 'abs(${1:number})' },
+                        { label: 'round', kind: monaco.languages.CompletionItemKind.Function, insertText: 'round(${1:number}, ${2:ndigits})' },
+                        { label: 'pow', kind: monaco.languages.CompletionItemKind.Function, insertText: 'pow(${1:base}, ${2:exp})' },
+                        { label: 'divmod', kind: monaco.languages.CompletionItemKind.Function, insertText: 'divmod(${1:a}, ${2:b})' },
+                        { label: 'all', kind: monaco.languages.CompletionItemKind.Function, insertText: 'all(${1:iterable})' },
+                        { label: 'any', kind: monaco.languages.CompletionItemKind.Function, insertText: 'any(${1:iterable})' },
+                        { label: 'bin', kind: monaco.languages.CompletionItemKind.Function, insertText: 'bin(${1:number})' },
+                        { label: 'chr', kind: monaco.languages.CompletionItemKind.Function, insertText: 'chr(${1:integer})' },
+                        { label: 'ord', kind: monaco.languages.CompletionItemKind.Function, insertText: 'ord(${1:character})' },
+                        { label: 'hex', kind: monaco.languages.CompletionItemKind.Function, insertText: 'hex(${1:number})' },
+                        { label: 'oct', kind: monaco.languages.CompletionItemKind.Function, insertText: 'oct(${1:number})' },
+                        { label: 'repr', kind: monaco.languages.CompletionItemKind.Function, insertText: 'repr(${1:object})' },
+                        { label: 'eval', kind: monaco.languages.CompletionItemKind.Function, insertText: 'eval(${1:expression})' },
+                        { label: 'exec', kind: monaco.languages.CompletionItemKind.Function, insertText: 'exec(${1:object})' },
+                        { label: 'format', kind: monaco.languages.CompletionItemKind.Function, insertText: 'format(${1:value}, ${2:format_spec})' },
+                        { label: 'hash', kind: monaco.languages.CompletionItemKind.Function, insertText: 'hash(${1:object})' },
+                        { label: 'help', kind: monaco.languages.CompletionItemKind.Function, insertText: 'help(${1:object})' },
+                        { label: 'id', kind: monaco.languages.CompletionItemKind.Function, insertText: 'id(${1:object})' },
+                        { label: 'input', kind: monaco.languages.CompletionItemKind.Function, insertText: 'input(${1:prompt})' },
+                        { label: 'iter', kind: monaco.languages.CompletionItemKind.Function, insertText: 'iter(${1:object})' },
+                        { label: 'next', kind: monaco.languages.CompletionItemKind.Function, insertText: 'next(${1:iterator})' },
+                        { label: 'object', kind: monaco.languages.CompletionItemKind.Function, insertText: 'object()' },
+                        { label: 'reversed', kind: monaco.languages.CompletionItemKind.Function, insertText: 'reversed(${1:sequence})' },
+                        { label: 'slice', kind: monaco.languages.CompletionItemKind.Function, insertText: 'slice(${1:start}, ${2:stop}, ${3:step})' },
+                        { label: 'vars', kind: monaco.languages.CompletionItemKind.Function, insertText: 'vars(${1:object})' },
+                        { label: 'dir', kind: monaco.languages.CompletionItemKind.Function, insertText: 'dir(${1:object})' },
+                        { label: 'type', kind: monaco.languages.CompletionItemKind.Function, insertText: 'type(${1:object})' },
+                        { label: 'locals', kind: monaco.languages.CompletionItemKind.Function, insertText: 'locals()' },
+                        { label: 'globals', kind: monaco.languages.CompletionItemKind.Function, insertText: 'globals()' },
+                        { label: 'callable', kind: monaco.languages.CompletionItemKind.Function, insertText: 'callable(${1:object})' },
+                        { label: 'compile', kind: monaco.languages.CompletionItemKind.Function, insertText: 'compile(${1:source}, ${2:filename}, ${3:mode})' },
+                        { label: 'complex', kind: monaco.languages.CompletionItemKind.Function, insertText: 'complex(${1:real}, ${2:imag})' },
+                        { label: 'delattr', kind: monaco.languages.CompletionItemKind.Function, insertText: 'delattr(${1:object}, ${2:name})' },
+                        { label: 'getattr', kind: monaco.languages.CompletionItemKind.Function, insertText: 'getattr(${1:object}, ${2:name})' },
+                        { label: 'hasattr', kind: monaco.languages.CompletionItemKind.Function, insertText: 'hasattr(${1:object}, ${2:name})' },
+                        { label: 'setattr', kind: monaco.languages.CompletionItemKind.Function, insertText: 'setattr(${1:object}, ${2:name}, ${3:value})' },
+                        { label: 'memoryview', kind: monaco.languages.CompletionItemKind.Function, insertText: 'memoryview(${1:object})' },
+                        { label: 'bytearray', kind: monaco.languages.CompletionItemKind.Function, insertText: 'bytearray(${1:source})' },
+                        { label: 'bytes', kind: monaco.languages.CompletionItemKind.Function, insertText: 'bytes(${1:source})' },
+                        { label: 'frozenset', kind: monaco.languages.CompletionItemKind.Function, insertText: 'frozenset(${1:iterable})' },
+                        { label: 'ascii', kind: monaco.languages.CompletionItemKind.Function, insertText: 'ascii(${1:object})' },
+                        { label: 'breakpoint', kind: monaco.languages.CompletionItemKind.Function, insertText: 'breakpoint()' },
+                        { label: 'copyright', kind: monaco.languages.CompletionItemKind.Function, insertText: 'copyright()' },
+                        { label: 'credits', kind: monaco.languages.CompletionItemKind.Function, insertText: 'credits()' },
+                        { label: 'license', kind: monaco.languages.CompletionItemKind.Function, insertText: 'license()' },
+                        { label: 'quit', kind: monaco.languages.CompletionItemKind.Function, insertText: 'quit()' },
+                        { label: 'exit', kind: monaco.languages.CompletionItemKind.Function, insertText: 'exit()' },
+                    ];
+                    return { suggestions: suggestions };
+                }
+            });
+
+            // Create editor instance
+            const editor = monaco.editor.create(document.getElementById('monaco-editor'), {
+                value: `# Write your Python code here
+def hello_world():
+    print("Hello, World!")
+
+hello_world()`,
+                language: 'python',
+                theme: 'vs-dark',
+                automaticLayout: true,
+                minimap: {
+                    enabled: false
+                },
+                fontSize: 14,
+                fontFamily: "'Consolas', monospace",
+                lineNumbers: 'on',
+                roundedSelection: false,
+                scrollBeyondLastLine: false,
+                readOnly: false,
+                cursorStyle: 'line',
+                tabSize: 4,
+                insertSpaces: true,
+                wordWrap: 'on',
+                matchBrackets: 'always',
+                autoClosingBrackets: 'always',
+                autoClosingQuotes: 'always',
+                formatOnPaste: true,
+                formatOnType: true,
+                suggestOnTriggerCharacters: true,
+                quickSuggestions: true,
+                parameterHints: {
+                    enabled: true
+                },
+                suggest: {
+                    preview: true,
+                    showMethods: true,
+                    showFunctions: true,
+                    showConstructors: true,
+                    showFields: true,
+                    showVariables: true,
+                    showClasses: true,
+                    showStructs: true,
+                    showInterfaces: true,
+                    showModules: true,
+                    showProperties: true,
+                    showEvents: true,
+                    showOperators: true,
+                    showUnits: true,
+                    showValues: true,
+                    showConstants: true,
+                    showEnums: true,
+                    showEnumMembers: true,
+                    showKeywords: true,
+                    showWords: true,
+                    showColors: true,
+                    showFiles: true,
+                    showReferences: true,
+                    showFolders: true,
+                    showTypeParameters: true,
+                    showSnippets: true
+                }
+            });
+
+            // Add keyboard shortcut for running code (Ctrl+Enter)
+            editor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.Enter, function() {
+                document.getElementById('run').click();
+            });
+
+            const statusElement = document.getElementById("status");
+            const outputElement = document.getElementById("output");
+            const inputContainer = document.getElementById("input-container");
+            const userInput = document.getElementById("user-input");
+            const submitInput = document.getElementById("submit-input");
+            const cancelInput = document.getElementById("cancel-input");
+
+            let currentInputs = [];
+            let isWaitingForInput = false;
+            let executionCount = 0;
+            const MAX_EXECUTIONS = 10;
+
+            function runCode() {
+                if (executionCount >= MAX_EXECUTIONS) {
+                    outputElement.textContent = "Error: Too many input requests. Please check your code for infinite loops.";
+                    statusElement.textContent = "Error";
+                    statusElement.className = "status error";
+                    return;
+                }
+
+                const code = editor.getValue();
+                statusElement.textContent = "Running...";
+                statusElement.className = "status running";
+                outputElement.textContent = "Running...";
+                inputContainer.classList.remove("active");
+                isWaitingForInput = false;
+                
+                fetch('/run_code/', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': '{{ csrf_token }}'
+                    },
+                    body: JSON.stringify({ 
+                        code: code,
+                        inputs: currentInputs
+                    })
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.needsInput) {
+                        executionCount++;
+                        isWaitingForInput = true;
+                        inputContainer.classList.add("active");
+                        userInput.focus();
+                        statusElement.textContent = "Waiting for input...";
+                        statusElement.className = "status running";
+                        
+                        if (data.output) {
+                            outputElement.textContent = data.output;
+                        }
+                    } else {
+                        executionCount = 0;
+                        outputElement.textContent = data.output;
+                        if (data.status === 'error') {
+                            statusElement.textContent = "Error";
+                            statusElement.className = "status error";
+                        } else {
+                            statusElement.textContent = "Success";
+                            statusElement.className = "status success";
+                        }
+                    }
+                })
+                .catch(error => {
+                    executionCount = 0;
+                    outputElement.textContent = "Error: " + error.message;
+                    statusElement.textContent = "Error";
+                    statusElement.className = "status error";
+                });
+            }
+
+            document.getElementById("run").onclick = function() {
+                executionCount = 0;
+                currentInputs = [];
+                runCode();
+            };
+
+            submitInput.onclick = function() {
+                if (isWaitingForInput) {
+                    currentInputs.push(userInput.value);
+                    userInput.value = "";
+                    runCode();
+                }
+            };
+
+            cancelInput.onclick = function() {
+                isWaitingForInput = false;
+                inputContainer.classList.remove("active");
+                statusElement.textContent = "Cancelled";
+                statusElement.className = "status error";
+                executionCount = 0;
+            };
+
+            userInput.addEventListener("keypress", function(e) {
+                if (e.key === "Enter" && isWaitingForInput) {
+                    submitInput.click();
+                }
+            });
+        });
+    </script>
+</body>
+</html>
+  
