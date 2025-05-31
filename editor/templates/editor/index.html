@@ -7,6 +7,7 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.45.0/min/vs/loader.min.js"></script>
     <style>
         :root {
+            /* Dark theme (default) */
             --bg-primary: #1e1e1e;
             --bg-secondary: #252526;
             --text-primary: #d4d4d4;
@@ -16,6 +17,21 @@
             --success: #4CAF50;
             --error: #f44336;
             --header-height: 50px;
+            --editor-border: #454545;
+            --panel-border: #2d2d2d;
+        }
+
+        [data-theme="light"] {
+            --bg-primary: #ffffff;
+            --bg-secondary: #f3f3f3;
+            --text-primary: #333333;
+            --text-secondary: #0066cc;
+            --accent: #007acc;
+            --border: #e0e0e0;
+            --success: #4CAF50;
+            --error: #f44336;
+            --editor-border: #d0d0d0;
+            --panel-border: #e8e8e8;
         }
 
         * {
@@ -37,11 +53,12 @@
         .header {
             height: var(--header-height);
             background-color: var(--bg-secondary);
-            border-bottom: 1px solid var(--border);
+            border-bottom: 1px solid var(--panel-border);
             display: flex;
             align-items: center;
             padding: 0 20px;
             justify-content: space-between;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
         }
 
         .header-left {
@@ -69,6 +86,7 @@
             gap: 20px;
             padding: 20px;
             height: calc(100vh - var(--header-height));
+            background-color: var(--bg-primary);
         }
 
         .editor-container {
@@ -77,12 +95,14 @@
             overflow: hidden;
             display: flex;
             flex-direction: column;
+            border: 1px solid var(--editor-border);
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
         }
 
         .editor-header {
             padding: 10px;
             background-color: var(--bg-primary);
-            border-bottom: 1px solid var(--border);
+            border-bottom: 1px solid var(--panel-border);
             display: flex;
             justify-content: space-between;
             align-items: center;
@@ -104,12 +124,14 @@
             overflow: hidden;
             display: flex;
             flex-direction: column;
+            border: 1px solid var(--editor-border);
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
         }
 
         .output-header {
             padding: 10px;
             background-color: var(--bg-primary);
-            border-bottom: 1px solid var(--border);
+            border-bottom: 1px solid var(--panel-border);
             display: flex;
             justify-content: space-between;
             align-items: center;
@@ -239,6 +261,116 @@
         ::-webkit-scrollbar-thumb:hover {
             background: #555;
         }
+
+        .theme-toggle {
+            background: none;
+            border: none;
+            color: var(--text-primary);
+            cursor: pointer;
+            padding: 8px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 14px;
+            transition: color 0.2s;
+        }
+
+        .theme-toggle:hover {
+            color: var(--accent);
+        }
+
+        .theme-toggle svg {
+            width: 16px;
+            height: 16px;
+        }
+
+        .feature-btn {
+            background-color: var(--bg-primary);
+            color: var(--text-primary);
+            border: 1px solid var(--border);
+            padding: 8px 16px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            transition: all 0.2s;
+        }
+
+        .feature-btn:hover {
+            background-color: var(--border);
+        }
+
+        .snippets-panel {
+            position: fixed;
+            right: -300px;
+            top: var(--header-height);
+            width: 300px;
+            height: calc(100vh - var(--header-height));
+            background-color: var(--bg-secondary);
+            border-left: 1px solid var(--panel-border);
+            transition: right 0.3s ease;
+            z-index: 100;
+            overflow-y: auto;
+            box-shadow: -2px 0 4px rgba(0, 0, 0, 0.1);
+        }
+
+        .snippets-panel.active {
+            right: 0;
+        }
+
+        .snippets-header {
+            padding: 15px;
+            border-bottom: 1px solid var(--panel-border);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background-color: var(--bg-primary);
+        }
+
+        .snippet-item {
+            padding: 10px 15px;
+            border-bottom: 1px solid var(--panel-border);
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+
+        .snippet-item:hover {
+            background-color: var(--bg-primary);
+        }
+
+        .snippet-title {
+            color: var(--text-secondary);
+            font-weight: 500;
+            margin-bottom: 5px;
+        }
+
+        .snippet-description {
+            color: var(--text-primary);
+            font-size: 12px;
+        }
+
+        .panel-toggle {
+            position: absolute;
+            top: 50%;
+            transform: translateY(-50%);
+            background-color: var(--bg-secondary);
+            border: 1px solid var(--border);
+            color: var(--text-primary);
+            padding: 8px;
+            cursor: pointer;
+            z-index: 101;
+            transition: all 0.3s ease;
+        }
+
+        .snippets-toggle {
+            right: 20px;
+        }
+
+        .panel-toggle:hover {
+            background-color: var(--border);
+        }
     </style>
 </head>
 <body>
@@ -247,10 +379,37 @@
             <div class="logo">Online Python Editor</div>
         </div>
         <div class="header-right">
+            <button class="feature-btn" onclick="toggleSnippetsPanel()">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"></path>
+                </svg>
+                Snippets
+            </button>
+            <button class="feature-btn" onclick="saveCode()">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M19 21H5a2 2 0 01-2-2V5a2 2 0 012-2h11l5 5v11a2 2 0 01-2 2z"></path>
+                    <polyline points="17 21 17 13 7 13 7 21"></polyline>
+                    <polyline points="7 3 7 8 15 8"></polyline>
+                </svg>
+                Save
+            </button>
+            <button class="theme-toggle" onclick="toggleTheme()" id="themeToggle">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z"></path>
+                </svg>
+                <span id="themeText">Light Mode</span>
+            </button>
             <button id="run" class="btn">
                 <span>▶</span> Run
             </button>
         </div>
+    </div>
+
+    <div class="snippets-panel" id="snippetsPanel">
+        <div class="snippets-header">
+            <h3 style="color: var(--text-secondary);">Code Snippets</h3>
+        </div>
+        <div id="snippetsList"></div>
     </div>
 
     <div class="main-container">
@@ -279,6 +438,43 @@
     </div>
 
     <script>
+        // Theme management
+        function setTheme(theme) {
+            document.documentElement.setAttribute('data-theme', theme);
+            localStorage.setItem('theme', theme);
+            updateThemeButton(theme);
+            if (editor) {
+                editor.updateOptions({
+                    theme: theme === 'dark' ? 'vs-dark' : 'vs'
+                });
+            }
+        }
+
+        function toggleTheme() {
+            const currentTheme = document.documentElement.getAttribute('data-theme') || 'dark';
+            const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
+            setTheme(newTheme);
+        }
+
+        function updateThemeButton(theme) {
+            const themeText = document.getElementById('themeText');
+            const themeIcon = document.querySelector('.theme-toggle svg');
+            
+            if (theme === 'dark') {
+                themeText.textContent = 'Light Mode';
+                themeIcon.innerHTML = '<path d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z"></path>';
+            } else {
+                themeText.textContent = 'Dark Mode';
+                themeIcon.innerHTML = '<path d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"></path>';
+            }
+        }
+
+        // Initialize theme from localStorage or default to dark
+        document.addEventListener('DOMContentLoaded', function() {
+            const savedTheme = localStorage.getItem('theme') || 'dark';
+            setTheme(savedTheme);
+        });
+
         // Initialize Monaco Editor
         require.config({ paths: { 'vs': 'https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.45.0/min/vs' }});
         require(['vs/editor/editor.main'], function() {
@@ -397,7 +593,7 @@
             });
 
             // Create editor instance
-            const editor = monaco.editor.create(document.getElementById('monaco-editor'), {
+            editor = monaco.editor.create(document.getElementById('monaco-editor'), {
                 value: `# Write your Python code here
 def hello_world():
     print("Hello, World!")
@@ -407,7 +603,8 @@ hello_world()`,
                 theme: 'vs-dark',
                 automaticLayout: true,
                 minimap: {
-                    enabled: false
+                    enabled: true,
+                    maxColumn: 80
                 },
                 fontSize: 14,
                 fontFamily: "'Consolas', monospace",
@@ -428,34 +625,6 @@ hello_world()`,
                 quickSuggestions: true,
                 parameterHints: {
                     enabled: true
-                },
-                suggest: {
-                    preview: true,
-                    showMethods: true,
-                    showFunctions: true,
-                    showConstructors: true,
-                    showFields: true,
-                    showVariables: true,
-                    showClasses: true,
-                    showStructs: true,
-                    showInterfaces: true,
-                    showModules: true,
-                    showProperties: true,
-                    showEvents: true,
-                    showOperators: true,
-                    showUnits: true,
-                    showValues: true,
-                    showConstants: true,
-                    showEnums: true,
-                    showEnumMembers: true,
-                    showKeywords: true,
-                    showWords: true,
-                    showColors: true,
-                    showFiles: true,
-                    showReferences: true,
-                    showFolders: true,
-                    showTypeParameters: true,
-                    showSnippets: true
                 }
             });
 
@@ -562,6 +731,109 @@ hello_world()`,
                     submitInput.click();
                 }
             });
+        });
+
+        // Code Snippets
+        const snippets = [
+            {
+                title: "Basic Function",
+                description: "Template for a basic Python function",
+                code: "def function_name(parameters):\n    \"\"\"Function description\"\"\"\n    # Function body\n    return result"
+            },
+            {
+                title: "Class Template",
+                description: "Template for a Python class",
+                code: "class ClassName:\n    def __init__(self, parameters):\n        self.parameters = parameters\n    \n    def method_name(self):\n        # Method body\n        pass"
+            },
+            {
+                title: "Try-Except Block",
+                description: "Error handling template",
+                code: "try:\n    # Code that might raise an exception\n    pass\nexcept Exception as e:\n    # Handle the exception\n    print(f\"Error: {e}\")"
+            },
+            {
+                title: "List Comprehension",
+                description: "Template for list comprehension",
+                code: "new_list = [expression for item in iterable if condition]"
+            },
+            {
+                title: "File Handling",
+                description: "Template for file operations",
+                code: "with open('filename.txt', 'r') as file:\n    content = file.read()\n    # Process content"
+            }
+        ];
+
+        let editor; // Global editor variable
+
+        function initializeSnippets() {
+            const snippetsList = document.getElementById('snippetsList');
+            snippetsList.innerHTML = ''; // Clear existing snippets
+            snippets.forEach(snippet => {
+                const div = document.createElement('div');
+                div.className = 'snippet-item';
+                div.innerHTML = `
+                    <div class="snippet-title">${snippet.title}</div>
+                    <div class="snippet-description">${snippet.description}</div>
+                `;
+                div.onclick = () => insertSnippet(snippet.code);
+                snippetsList.appendChild(div);
+            });
+        }
+
+        function insertSnippet(code) {
+            if (!editor) return;
+            
+            const position = editor.getPosition();
+            const selection = editor.getSelection();
+            
+            editor.executeEdits('', [{
+                range: selection || new monaco.Range(
+                    position.lineNumber,
+                    position.column,
+                    position.lineNumber,
+                    position.column
+                ),
+                text: code,
+                forceMoveMarkers: true
+            }]);
+            
+            // Close the snippets panel after insertion
+            document.getElementById('snippetsPanel').classList.remove('active');
+        }
+
+        // Save Code Function
+        function saveCode() {
+            if (!editor) return;
+            
+            const code = editor.getValue();
+            const blob = new Blob([code], { type: 'text/plain' });
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'script.py';
+            document.body.appendChild(a);
+            a.click();
+            window.URL.revokeObjectURL(url);
+            document.body.removeChild(a);
+        }
+
+        // Panel Toggle Functions
+        function toggleSnippetsPanel() {
+            const panel = document.getElementById('snippetsPanel');
+            if (!panel) return;
+            
+            panel.classList.toggle('active');
+            if (panel.classList.contains('active')) {
+                initializeSnippets(); // Refresh snippets when opening
+            }
+        }
+
+        // Add keyboard shortcuts
+        document.addEventListener('keydown', function(e) {
+            // Ctrl/Cmd + S to toggle snippets
+            if ((e.ctrlKey || e.metaKey) && e.key === 's') {
+                e.preventDefault();
+                toggleSnippetsPanel();
+            }
         });
     </script>
 </body>
